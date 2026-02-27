@@ -12,7 +12,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "${DS_POSTGRESQL}"
+        "uid": "postgres-nbp"
       },
       "fieldConfig": {
         "defaults": {
@@ -49,7 +49,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+          "datasource": { "type": "postgres", "uid": "postgres-nbp" },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -63,7 +63,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "${DS_POSTGRESQL}"
+        "uid": "postgres-nbp"
       },
       "fieldConfig": {
         "defaults": {
@@ -95,7 +95,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+          "datasource": { "type": "postgres", "uid": "postgres-nbp" },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -109,7 +109,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "${DS_POSTGRESQL}"
+        "uid": "postgres-nbp"
       },
       "fieldConfig": {
         "defaults": {
@@ -141,7 +141,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+          "datasource": { "type": "postgres", "uid": "postgres-nbp" },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -155,7 +155,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "${DS_POSTGRESQL}"
+        "uid": "postgres-nbp"
       },
       "fieldConfig": {
         "defaults": {
@@ -187,7 +187,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+          "datasource": { "type": "postgres", "uid": "postgres-nbp" },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -201,7 +201,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "${DS_POSTGRESQL}"
+        "uid": "postgres-nbp"
       },
       "fieldConfig": {
         "defaults": {
@@ -247,7 +247,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+          "datasource": { "type": "postgres", "uid": "postgres-nbp" },
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
@@ -255,7 +255,7 @@
           "refId": "USD"
         },
         {
-          "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+          "datasource": { "type": "postgres", "uid": "postgres-nbp" },
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
@@ -263,7 +263,7 @@
           "refId": "EUR"
         },
         {
-          "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+          "datasource": { "type": "postgres", "uid": "postgres-nbp" },
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
@@ -271,7 +271,7 @@
           "refId": "GBP"
         },
         {
-          "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+          "datasource": { "type": "postgres", "uid": "postgres-nbp" },
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
@@ -285,7 +285,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "${DS_POSTGRESQL}"
+        "uid": "postgres-nbp"
       },
       "fieldConfig": {
         "defaults": {
@@ -317,7 +317,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+          "datasource": { "type": "postgres", "uid": "postgres-nbp" },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
