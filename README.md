@@ -1,131 +1,131 @@
 # Automatyczny Ekstraktor Danych NBP
 
+[![Bash](https://img.shields.io/badge/Bash-4EAA25?style=flat&logo=gnu-bash&logoColor=white)](https://www.gnu.org/software/bash/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat&logo=grafana&logoColor=white)](https://grafana.com/)
+
 ## Opis projektu
 
-Projekt przedstawia **miniaturowy pipeline ETL** (Extract, Transform, Load), który automatycznie pobiera aktualny kurs dolara amerykańskiego (USD) z publicznego API Narodowego Banku Polskiego, przetwarza dane i zapisuje je do relacyjnej bazy danych PostgreSQL.
+Projekt przedstawia **pipeline ETL** (Extract, Transform, Load), który automatycznie pobiera kursy walut (USD, EUR, GBP, CHF) z publicznego API Narodowego Banku Polskiego, przetwarza dane i zapisuje je do bazy PostgreSQL. Dane są wizualizowane na interaktywnym dashboardzie Grafana.
 
-### Cel projektu
-- Demonstracja umiejętności budowania procesów ETL
-- Praktyczne wykorzystanie API REST
-- Integracja z bazą danych PostgreSQL
-- Konteneryzacja z użyciem Docker
+### Funkcje
+- Pobieranie kursów 4 walut z API NBP
+- Zapis do relacyjnej bazy danych PostgreSQL
+- Interaktywny dashboard w Grafanie
+- Konteneryzacja z Docker Compose
 
 ## Architektura
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│    API NBP      │────▶│    CSV File     │────▶│   PostgreSQL    │
-│    (JSON)       │     │   usd_rates     │     │    Database     │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-      EXTRACT             TRANSFORM                  LOAD
-     (curl+jq)            (zapis)               (psql \copy)
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│    API NBP      │────▶│    CSV File     │────▶│   PostgreSQL    │────▶│    Grafana      │
+│    (JSON)       │     │     rates       │     │    Database     │     │   Dashboard     │
+└─────────────────┘     └─────────────────┘     └─────────────────┘     └─────────────────┘
+      EXTRACT             TRANSFORM                  LOAD                  VISUALIZE
+     (curl+jq)            (zapis)               (psql \copy)            (http://localhost:3000)
 ```
-
-### Przepływ danych
-
-1. **Extract** — Skrypt `fetchNbp.sh` pobiera dane JSON z API NBP za pomocą `curl`
-2. **Transform** — Narzędzie `jq` parsuje JSON i wyciąga tylko potrzebne pola (data, kurs)
-3. **Load** — Skrypt `loadToDb.sh` ładuje dane z CSV do tabeli PostgreSQL
 
 ## Struktura projektu
 
 ```
 nbp-etl/
-├── docker-compose.yml   # Konfiguracja kontenera PostgreSQL
-├── initDB.sql           # Schemat bazy danych (DDL)
-├── fetchNbp.sh          # [E] Pobieranie danych z API NBP
-├── loadToDb.sh          # [L] Ładowanie danych do PostgreSQL
-├── runETL.sh            # Orkiestrator całego pipeline'u
-├── checkData.sh         # Weryfikacja danych w bazie
-├── usd_rates.csv        # Plik pośredni z danymi (generowany)
-└── README.md            # Dokumentacja projektu
+├── docker-compose.yml       # PostgreSQL + Grafana
+├── initDB.sql               # Schemat bazy danych
+├── grafana/
+│   ├── provisioning/        # Auto-konfiguracja Grafany
+│   │   ├── datasources/
+│   │   └── dashboards/
+│   └── dashboards/          # Dashboard JSON
+├── fetchNbp.sh              # ETL: tylko USD
+├── fetchMultiCurrency.sh    # ETL: USD, EUR, GBP, CHF
+├── loadToDb.sh              # Load: tylko USD
+├── loadMultiCurrency.sh     # Load: wiele walut
+├── runETL.sh                # Pipeline: tylko USD
+├── runETL_multi.sh          # Pipeline: wiele walut
+└── checkData.sh             # Podgląd danych
 ```
 
-## 🛠️ Technologie
+## Technologie
 
 | Technologia | Zastosowanie |
 |-------------|-------------|
 | **Bash** | Skrypty automatyzacji ETL |
-| **curl** | Pobieranie danych z API (HTTP client) |
-| **jq** | Parsowanie i transformacja JSON |
-| **PostgreSQL 16** | Relacyjna baza danych |
-| **Docker** | Konteneryzacja bazy danych |
-| **API NBP** | Źródło danych (kursy walut) |
-
-## Wymagania
-
-- **Docker Desktop** — [Pobierz](https://www.docker.com/products/docker-desktop/)
-- **WSL** (Windows) lub terminal Linux/macOS
-- Zainstalowane w systemie: `curl`, `jq`, `psql` (postgresql-client)
+| **curl** | Pobieranie danych z API |
+| **jq** | Parsowanie JSON |
+| **PostgreSQL 16** | Baza danych |
+| **Docker** | Konteneryzacja |
+| **Grafana** | Wizualizacja danych |
 
 ## Instalacja i uruchomienie
 
-### 1. Uruchom bazę danych PostgreSQL
+### 1. Uruchom kontenery (PostgreSQL + Grafana)
 
 ```bash
 docker-compose up -d
 ```
 
-### 2. Uruchom pipeline ETL
+### 2. Uruchom ETL (wiele walut)
 
 ```bash
-bash runETL.sh
+bash runETL_multi.sh
 ```
 
-### 3. Sprawdź dane w bazie
+### 3. Otwórz dashboard Grafana
+
+**URL:** http://localhost:3000
+
+**Login:** `admin` / `admin123`
+
+### 4. Sprawdź dane w terminalu
 
 ```bash
 bash checkData.sh
 ```
 
-**Przykładowy output:**
-```
-=== Ostatnie 10 rekordów z tabeli nbp_usd_rates ===
- id | exchange_date |  rate  
-----+---------------+--------
-  1 | 2026-02-27    | 3.5804
+## Dashboard Grafana
 
-```
+Dashboard zawiera:
+- **4 panele Stat** — aktualny kurs USD, EUR, GBP, CHF
+- **Wykres liniowy** — historia kursów wszystkich walut
+- **Tabela** — ostatnie 50 rekordów
 
 ## Użycie
 
 | Komenda | Opis |
 |---------|------|
-| `bash runETL.sh` | Uruchom pełny pipeline ETL |
-| `bash fetchNbp.sh` | Tylko pobierz dane z API |
-| `bash loadToDb.sh` | Tylko załaduj CSV do bazy |
-| `bash checkData.sh` | Wyświetl dane z bazy |
+| `bash runETL_multi.sh` | ETL dla 4 walut |
+| `bash runETL.sh` | ETL tylko USD |
+| `bash checkData.sh` | Podgląd danych w bazie |
 
-### Zarządzanie Dockerem
+### Docker
 
 ```bash
-docker-compose up -d      # Uruchom kontener
-docker-compose down       # Zatrzymaj kontener
-docker-compose down -v    # Zatrzymaj i usuń dane
-docker-compose logs -f    # Zobacz logi
+docker-compose up -d      # Uruchom
+docker-compose down       # Zatrzymaj
+docker-compose logs -f    # Logi
 ```
 
 ## Schemat bazy danych
 
 ```sql
-CREATE TABLE nbp_usd_rates (
+-- Tabela dla wielu walut
+CREATE TABLE nbp_rates (
     id SERIAL PRIMARY KEY,
-    exchange_date DATE UNIQUE,
-    rate NUMERIC(10,4)
+    currency_code VARCHAR(3) NOT NULL,
+    currency_name VARCHAR(50),
+    exchange_date DATE NOT NULL,
+    rate NUMERIC(10,4) NOT NULL,
+    UNIQUE(currency_code, exchange_date)
 );
 ```
 
-| Kolumna | Typ | Opis |
-|---------|-----|------|
-| `id` | SERIAL | Klucz główny (auto-increment) |
-| `exchange_date` | DATE | Data kursu (unikalna) |
-| `rate` | NUMERIC(10,4) | Kurs średni USD/PLN |
+## API NBP
 
+**Endpoint:** `http://api.nbp.pl/api/exchangerates/rates/a/{waluta}/?format=json`
 
-## 🔮 Możliwe rozszerzenia
+**Obsługiwane waluty:** USD, EUR, GBP, CHF
 
-- [ ] Automatyczne uruchamianie przez CRON
-- [ ] Obsługa wielu walut (EUR, GBP, CHF)
-- [ ] Wizualizacja danych (wykresy)
-- [ ] Powiadomienia o zmianach kursu
-- [ ] Dashboard w Grafanie
+## Autor
+
+Projekt stworzony jako demonstracja umiejętności ETL i wizualizacji danych.

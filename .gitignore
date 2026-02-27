@@ -1,8 +1,10 @@
 # Dane wygenerowane przez ETL
 usd_rates.csv
+rates.csv
 
 # Docker volumes
 postgres_data/
+grafana_data/
 
 # System files
 .DS_Store
