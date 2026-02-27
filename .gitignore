@@ -1,0 +1,16 @@
+# Dane wygenerowane przez ETL
+usd_rates.csv
+
+# Docker volumes
+postgres_data/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
