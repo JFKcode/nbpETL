@@ -4,62 +4,94 @@
 # Pobieranie kursów wielu walut z API NBP
 # ===========================================
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Załaduj zmienne środowiskowe z .env
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    set -a; source "$SCRIPT_DIR/.env"; set +a
+fi
+
+# Konfiguracja logowania
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/etl_$(date +%Y-%m-%d).log"
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
+
+# Walidacja narzędzi
+for tool in curl jq; do
+    if ! command -v "$tool" &>/dev/null; then
+        log "BŁĄD: Wymagane narzędzie '$tool' nie jest zainstalowane."
+        exit 1
+    fi
+done
+
 # Lista walut do pobrania
 CURRENCIES=("usd" "eur" "gbp" "chf")
 
-# Nazwy walut
 declare -A CURRENCY_NAMES
 CURRENCY_NAMES["usd"]="dolar amerykański"
 CURRENCY_NAMES["eur"]="euro"
 CURRENCY_NAMES["gbp"]="funt szterling"
 CURRENCY_NAMES["chf"]="frank szwajcarski"
 
-# Plik wyjściowy
-FILE_PATH="rates.csv"
+FILE_PATH="$SCRIPT_DIR/rates.csv"
 
-# Jeśli plik nie istnieje, tworzymy nagłówki
-if [ ! -f $FILE_PATH ]; then
-    echo "currency_code,currency_name,exchange_date,rate" > $FILE_PATH
-fi
+# Nadpisz plik CSV z nagłówkami (bieżący batch)
+echo "currency_code,currency_name,exchange_date,rate" > "$FILE_PATH"
 
-echo "Pobieranie kursów walut z API NBP..."
-echo "======================================"
+log "Pobieranie kursów walut z API NBP..."
 
 SUCCESS_COUNT=0
 ERROR_COUNT=0
 
 for CURRENCY in "${CURRENCIES[@]}"; do
     URL="http://api.nbp.pl/api/exchangerates/rates/a/${CURRENCY}/?format=json"
-    
-    # Pobierz dane z API
-    RESPONSE=$(curl -s $URL)
-    
-    # Sprawdź czy odpowiedź nie jest pusta
+    RESPONSE=""
+
+    # Retry z exponential backoff (3 próby)
+    for ATTEMPT in 1 2 3; do
+        RESPONSE=$(curl -sf --max-time 10 "$URL" 2>/dev/null)
+        if [ -n "$RESPONSE" ]; then
+            break
+        fi
+        log "[$CURRENCY] Próba $ATTEMPT/3 nieudana - czekam $((ATTEMPT * 5))s..."
+        sleep $((ATTEMPT * 5))
+    done
+
     if [ -z "$RESPONSE" ]; then
-        echo "[$CURRENCY] Błąd: brak odpowiedzi z API"
+        log "[$CURRENCY] BŁĄD: brak odpowiedzi z API po 3 próbach"
         ((ERROR_COUNT++))
         continue
     fi
-    
-    # Wyciągnij dane z JSON
-    DATE=$(echo $RESPONSE | jq -r '.rates[0].effectiveDate')
-    RATE=$(echo $RESPONSE | jq -r '.rates[0].mid')
-    CODE=$(echo $RESPONSE | jq -r '.code')
-    
-    # Sprawdź poprawność danych
-    if [ "$DATE" == "null" ] || [ "$RATE" == "null" ]; then
-        echo "[$CURRENCY] Błąd: nieprawidłowe dane"
+
+    DATE=$(echo "$RESPONSE" | jq -r '.rates[0].effectiveDate')
+    RATE=$(echo "$RESPONSE" | jq -r '.rates[0].mid')
+    CODE=$(echo "$RESPONSE" | jq -r '.code')
+
+    # Walidacja danych
+    if [ "$DATE" = "null" ] || [ "$RATE" = "null" ] || [ -z "$DATE" ] || [ -z "$RATE" ]; then
+        log "[$CURRENCY] BŁĄD: nieprawidłowa struktura odpowiedzi API"
         ((ERROR_COUNT++))
         continue
     fi
-    
-    # Zapisz do CSV
-    CURRENCY_UPPER=$(echo $CURRENCY | tr '[:lower:]' '[:upper:]')
-    echo "${CURRENCY_UPPER},${CURRENCY_NAMES[$CURRENCY]},$DATE,$RATE" >> $FILE_PATH
-    
-    echo "[$CURRENCY_UPPER] $DATE: $RATE PLN"
+
+    # Walidacja: kurs musi być dodatnią liczbą
+    if ! echo "$RATE" | grep -qE '^[0-9]+(\.[0-9]+)?$' || [ "$(echo "$RATE <= 0" | bc -l 2>/dev/null)" = "1" ]; then
+        log "[$CURRENCY] BŁĄD: nieprawidłowa wartość kursu: $RATE"
+        ((ERROR_COUNT++))
+        continue
+    fi
+
+    CURRENCY_UPPER=$(echo "$CURRENCY" | tr '[:lower:]' '[:upper:]')
+    echo "${CURRENCY_UPPER},${CURRENCY_NAMES[$CURRENCY]},$DATE,$RATE" >> "$FILE_PATH"
+
+    log "[$CURRENCY_UPPER] $DATE: $RATE PLN"
     ((SUCCESS_COUNT++))
 done
 
-echo "======================================"
-echo "Pobrano: $SUCCESS_COUNT walut | Błędy: $ERROR_COUNT"
+log "Pobrano: $SUCCESS_COUNT walut | Błędy: $ERROR_COUNT"
+
+if [ "$SUCCESS_COUNT" -eq 0 ]; then
+    log "BŁĄD KRYTYCZNY: Nie pobrano żadnych danych!"
+    exit 1
+fi

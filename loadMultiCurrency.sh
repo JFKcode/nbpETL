@@ -4,28 +4,37 @@
 # Ładowanie wielu walut do PostgreSQL
 # ===========================================
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Załaduj zmienne środowiskowe z .env
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    set -a; source "$SCRIPT_DIR/.env"; set +a
+fi
+
+# Konfiguracja logowania
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/etl_$(date +%Y-%m-%d).log"
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
+
 # Dane połączenia z bazą PostgreSQL
-DB_USER="postgres"
-DB_PASSWORD="postgres123"
-DB_NAME="mojabaza"
-DB_HOST="localhost"
+DB_USER="${POSTGRES_USER:-postgres}"
+DB_NAME="${POSTGRES_DB:-mojabaza}"
+DB_HOST="${DB_HOST:-localhost}"
+DB_PORT="${DB_PORT:-5432}"
 
-export PGPASSWORD=$DB_PASSWORD
+export PGPASSWORD="${POSTGRES_PASSWORD}"
 
-CSV_FILE="$(pwd)/rates.csv"
+CSV_FILE="$SCRIPT_DIR/rates.csv"
 
-# Sprawdź czy plik istnieje
 if [ ! -f "$CSV_FILE" ]; then
-    echo "Błąd: Plik $CSV_FILE nie istnieje."
-    echo "Uruchom najpierw: bash fetchMultiCurrency.sh"
+    log "BŁĄD: Plik $CSV_FILE nie istnieje. Uruchom najpierw: bash fetchMultiCurrency.sh"
     exit 1
 fi
 
-echo "Ładowanie danych do PostgreSQL..."
+log "Ładowanie danych do PostgreSQL..."
 
-# Użyj tymczasowej tabeli do upsert (INSERT ... ON CONFLICT)
-psql -U $DB_USER -h $DB_HOST -d $DB_NAME <<EOF
--- Tworzymy tabelę tymczasową
+psql -U "$DB_USER" -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" <<EOF
 CREATE TEMP TABLE temp_rates (
     currency_code VARCHAR(3),
     currency_name VARCHAR(50),
@@ -33,22 +42,21 @@ CREATE TEMP TABLE temp_rates (
     rate NUMERIC(10,4)
 );
 
--- Ładujemy CSV do tabeli tymczasowej
 \copy temp_rates FROM '$CSV_FILE' DELIMITER ',' CSV HEADER;
 
--- Wstawiamy dane z obsługą konfliktów (upsert)
 INSERT INTO nbp_rates (currency_code, currency_name, exchange_date, rate)
 SELECT currency_code, currency_name, exchange_date, rate FROM temp_rates
-ON CONFLICT (currency_code, exchange_date) 
+ON CONFLICT (currency_code, exchange_date)
 DO UPDATE SET rate = EXCLUDED.rate, currency_name = EXCLUDED.currency_name;
 
--- Zliczamy wstawione rekordy
 SELECT 'Załadowano ' || COUNT(*) || ' rekordów' as status FROM temp_rates;
 EOF
 
 if [ $? -eq 0 ]; then
-    echo "Sukces! Dane wgrane do bazy."
+    log "Sukces! Dane wgrane do bazy."
+    # Usuń plik CSV po załadowaniu - następny fetch stworzy go od nowa
+    rm -f "$CSV_FILE"
 else
-    echo "Błąd podczas ładowania danych."
+    log "BŁĄD podczas ładowania danych."
     exit 1
 fi

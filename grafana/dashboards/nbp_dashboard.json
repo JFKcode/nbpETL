@@ -329,7 +329,7 @@
       "type": "table"
     }
   ],
-  "refresh": "",
+  "refresh": "1h",
   "schemaVersion": 38,
   "style": "dark",
   "tags": ["nbp", "kursy", "etl"],
@@ -341,7 +341,7 @@
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "browser",
+  "timezone": "Europe/Warsaw",
   "title": "NBP - Kursy Walut",
   "uid": "nbp-dashboard",
   "version": 1,

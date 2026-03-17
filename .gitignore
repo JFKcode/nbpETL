@@ -16,3 +16,7 @@ Thumbs.db
 
 # Logs
 *.log
+logs/
+
+# Konfiguracja środowiskowa (zawiera hasła - nie commitować!)
+.env

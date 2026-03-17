@@ -9,7 +9,7 @@ datasources:
     database: mojabaza
     user: postgres
     secureJsonData:
-      password: postgres123
+      password: ${POSTGRES_PASSWORD}
     jsonData:
       sslmode: disable
       maxOpenConns: 5
